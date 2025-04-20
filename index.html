@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAIT Quiz: History & Courses</title>
+  <style>
+    /* Reset & Box Sizing */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Verdana', sans-serif;
+      background: #2C3E50;
+      color: #ECF0F1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .quiz-card {
+      background: #34495E;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 800px;
+      overflow: hidden;
+    }
+    .quiz-header {
+      background: #1ABC9C;
+      padding: 20px;
+      text-align: center;
+    }
+    .quiz-header h1 {
+      font-size: 1.8rem;
+      color: #2C3E50;
+    }
+    .quiz-body {
+      display: flex;
+    }
+    .question-panel {
+      flex: 2;
+      padding: 20px;
+      border-right: 2px solid #1ABC9C;
+    }
+    .options-panel {
+      flex: 1;
+      padding: 20px;
+    }
+    .question-panel h2 {
+      margin-bottom: 16px;
+      font-size: 1.4rem;
+    }
+    .options-panel ul {
+      list-style: none;
+    }
+    .options-panel li {
+      background: #3B5998;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .options-panel li:hover,
+    .options-panel li.active {
+      background: #8E44AD;
+    }
+    .quiz-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      background: #1F2F3F;
+    }
+    .progress-bar-wrap {
+      flex: 1;
+      background: #7F8C8D;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-right: 20px;
+      height: 10px;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: #E74C3C;
+      transition: width 0.3s ease;
+    }
+    .controls button {
+      background: #E67E22;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 1rem;
+    }
+    .controls button:hover {
+      background: #D35400;
+    }
+    #feedbackMessage {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    #resultSection {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+    #resultSection h2 {
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz-card">
+    <div class="quiz-header">
+      <h1>Test Your MAIT Knowledge</h1>
+    </div>
+    <div class="quiz-body">
+      <div class="question-panel">
+        <h2 id="questionText">Loading question...</h2>
+      </div>
+      <div class="options-panel">
+        <ul id="optionsList"></ul>
+      </div>
+    </div>
+    <div class="quiz-footer">
+      <div class="progress-bar-wrap">
+        <div id="progressIndicator" class="progress-bar"></div>
+      </div>
+      <div class="controls">
+        <button id="submitBtn">Submit</button>
+        <span id="countdownTimer">30s</span>
+      </div>
+    </div>
+    <div id="feedbackMessage"></div>
+    <div id="resultSection">
+      <h2>Your Score: <span id="scoreDisplay"></span>/10</h2>
+      <button onclick="window.location.reload()">Retake</button>
+    </div>
+  </div>
+
+  <script>
+    // Updated quiz data
+    const questions = [
+      { q: "Which year did MAIT first introduce the Artificial Intelligence branch?", opts: ["2017","2018","2019","2020"], ans: 2 },
+      { q: "What is the full form of MAIT?", opts: [
+          "Maharaja Agrasen Institute of Technology",
+          "Modern Arts Institute of Technology",
+          "Maharaja Agricultural Institute of Training",
+          "Maharaja Academy of Information Technology"
+        ], ans: 0 },
+      { q: "How many undergraduate programs does MAIT offer?", opts: ["4","5","6","7"], ans: 2 },
+      { q: "Which fest is MAIT's annual techno-cultural extravaganza?", opts: ["Momentum","Aagaz","Utsav","Ignite"], ans: 1 },
+      { q: "Which company recruited the highest number of students from MAIT in 2024?", opts: ["Google","Amazon","Microsoft","Infosys"], ans: 1 },
+      { q: "What is the duration of the MCA program at MAIT?", opts: ["2 years","3 years","4 years","5 years"], ans: 1 },
+      { q: "Which university is MAIT affiliated with?", opts: ["IP University","Delhi University","JNU","Amity University"], ans: 0 },
+      { q: "Which student club at MAIT focuses on Google technologies?", opts: ["GDSC","IEEE","ACM","CSI"], ans: 0 },
+      { q: "What is the intake capacity for the CSE branch per batch?", opts: ["60","120","180","240"], ans: 2 },
+      { q: "Which building houses the IT department?", opts: ["Block A","Block B","Block C","Block D"], ans: 1 }
+    ];
+
+    let questionIndex = 0;
+    let userScore = 0;
+    let timerInterval;
+    let timeRemaining = 30;
+
+    // DOM refs
+    const questionText = document.getElementById('questionText');
+    const optionsList = document.getElementById('optionsList');
+    const submitBtn = document.getElementById('submitBtn');
+    const progressIndicator = document.getElementById('progressIndicator');
+    const countdownTimer = document.getElementById('countdownTimer');
+    const feedbackMessage = document.getElementById('feedbackMessage');
+    const resultSection = document.getElementById('resultSection');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+
+    submitBtn.addEventListener('click', handleSubmit);
+
+    function renderQuestion() {
+      clearInterval(timerInterval);
+      const current = questions[questionIndex];
+      questionText.textContent = current.q;
+      optionsList.innerHTML = '';
+      current.opts.forEach((opt, idx) => {
+        const li = document.createElement('li');
+        li.textContent = opt;
+        li.addEventListener('click', () => selectOption(li));
+        optionsList.appendChild(li);
+      });
+      updateProgress();
+      startTimer();
+    }
+
+    function selectOption(item) {
+      [...optionsList.children].forEach(li => li.classList.remove('active'));
+      item.classList.add('active');
+    }
+
+    function startTimer() {
+      timeRemaining = 30;
+      countdownTimer.textContent = timeRemaining + 's';
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        countdownTimer.textContent = timeRemaining + 's';
+        if (timeRemaining === 0) clearInterval(timerInterval) || handleSubmit();
+      }, 1000);
+    }
+
+    function handleSubmit() {
+      const selected = document.querySelector('#optionsList .active');
+      if (!selected) return alert('Please pick an option');
+      const idx = [...optionsList.children].indexOf(selected);
+      const correctIdx = questions[questionIndex].ans;
+      if (idx === correctIdx) {
+        userScore++;
+        feedbackMessage.textContent = 'Correct!';
+        feedbackMessage.style.color = '#2ECC71';
+      } else {
+        feedbackMessage.textContent = `Wrong! Ans: ${questions[questionIndex].opts[correctIdx]}`;
+        feedbackMessage.style.color = '#E74C3C';
+      }
+      clearInterval(timerInterval);
+      questionIndex++;
+      if (questionIndex < questions.length) {
+        setTimeout(() => { feedbackMessage.textContent = ''; renderQuestion(); }, 1200);
+      } else {
+        setTimeout(showResults, 1200);
+      }
+    }
+
+    function updateProgress() {
+      const pct = ((questionIndex) / questions.length) * 100;
+      progressIndicator.style.width = pct + '%';
+    }
+
+    function showResults() {
+      document.querySelector('.quiz-body').style.display = 'none';
+      document.querySelector('.quiz-footer').style.display = 'none';
+      feedbackMessage.style.display = 'none';
+      scoreDisplay.textContent = userScore;
+      resultSection.style.display = 'block';
+    }
+
+    // Shuffle questions and start
+    questions.sort(() => Math.random() - 0.5);
+    renderQuestion();
+  </script>
+</body>
+</html>
